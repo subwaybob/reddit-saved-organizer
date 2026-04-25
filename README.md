@@ -38,7 +38,7 @@ Reddit's built-in "Saved" feature has no search, no tags, no categories, and is 
 ### Installation
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/reddit-saved-organizer.git
+git clone https://github.com/subwaybob/reddit-saved-organizer.git
 cd reddit-saved-organizer
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
