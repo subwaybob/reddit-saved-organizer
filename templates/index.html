@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reddit Saved Organizer</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <header>
+        <h1>Reddit Saved Organizer</h1>
+        <div class="stats">
+            <span>{{ stats.total_items }} items</span>
+            <span>{{ stats.posts }} posts</span>
+            <span>{{ stats.comments }} comments</span>
+            <span>{{ stats.subreddits }} subreddits</span>
+        </div>
+    </header>
+
+    <main>
+        <section class="search-bar">
+            <input
+                type="text"
+                id="search-input"
+                placeholder="Search your saved items..."
+                autofocus
+            />
+            <select id="subreddit-filter">
+                <option value="">All subreddits</option>
+                {% for sub in subreddits %}
+                <option value="{{ sub.subreddit }}">
+                    r/{{ sub.subreddit }} ({{ sub.count }})
+                </option>
+                {% endfor %}
+            </select>
+            <select id="tag-filter">
+                <option value="">All tags</option>
+                {% for tag in tags %}
+                <option value="{{ tag.name }}">{{ tag.name }} ({{ tag.item_count }})</option>
+                {% endfor %}
+            </select>
+        </section>
+
+        <section id="results" class="results">
+            <p class="placeholder">Start typing to search your saved items.</p>
+        </section>
+    </main>
+
+    <script>
+        const searchInput = document.getElementById('search-input');
+        const subredditFilter = document.getElementById('subreddit-filter');
+        const tagFilter = document.getElementById('tag-filter');
+        const resultsContainer = document.getElementById('results');
+
+        let debounceTimer;
+
+        function performSearch() {
+            const query = searchInput.value.trim();
+            const subreddit = subredditFilter.value;
+            const tag = tagFilter.value;
+
+            if (!query && !subreddit && !tag) {
+                resultsContainer.innerHTML = '<p class="placeholder">Start typing to search your saved items.</p>';
+                return;
+            }
+
+            const params = new URLSearchParams();
+            if (query) params.set('q', query);
+            if (subreddit) params.set('subreddit', subreddit);
+            if (tag) params.set('tag', tag);
+
+            fetch(`/search?${params}`)
+                .then(r => r.json())
+                .then(items => renderResults(items))
+                .catch(err => {
+                    resultsContainer.innerHTML = `<p class="error">Search failed: ${err.message}</p>`;
+                });
+        }
+
+        function renderResults(items) {
+            if (items.length === 0) {
+                resultsContainer.innerHTML = '<p class="placeholder">No results found.</p>';
+                return;
+            }
+
+            resultsContainer.innerHTML = items.map(item => `
+                <article class="item ${item.item_type}">
+                    <div class="item-meta">
+                        <span class="item-type">${item.item_type}</span>
+                        <span class="subreddit">r/${item.subreddit}</span>
+                        <span class="author">u/${item.author}</span>
+                        <span class="score">${item.score} pts</span>
+                    </div>
+                    <h3><a href="${item.permalink}" target="_blank" rel="noopener">
+                        ${item.title || '(comment)'}
+                    </a></h3>
+                    ${item.body ? `<p class="body-preview">${item.body.substring(0, 300)}${item.body.length > 300 ? '...' : ''}</p>` : ''}
+                    ${item.tags ? `<div class="tags">${item.tags.split(',').map(t => `<span class="tag">${t}</span>`).join('')}</div>` : ''}
+                </article>
+            `).join('');
+        }
+
+        searchInput.addEventListener('input', () => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(performSearch, 300);
+        });
+
+        subredditFilter.addEventListener('change', performSearch);
+        tagFilter.addEventListener('change', performSearch);
+    </script>
+</body>
+</html>
